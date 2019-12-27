@@ -76,7 +76,7 @@ inputs:
     type: string
     default: { get_secret: default_subnet_name }
 
-  agent_user:
+  ssh_user:
     type: string
     default: { get_secret: default_linux_agent_user }
 
@@ -99,13 +99,10 @@ node_templates:
           protocol: tcp
           port_range_min: 9990
           port_range_max: 9990
-
-  agent_security_group:
-    type: cloudify.openstack.nodes.SecurityGroup
-    properties:
-      openstack_config: { get_input: openstack_config }
-      resource_id: { get_input: agent_security_group_name }
-      use_external_resource: true
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
 
   floating_ip:
     type: cloudify.openstack.nodes.FloatingIP
@@ -145,8 +142,6 @@ node_templates:
       - type: cloudify.relationships.connected_to
         target: subnet
       - type: cloudify.openstack.port_connected_to_security_group
-        target: agent_security_group
-      - type: cloudify.openstack.port_connected_to_security_group
         target: app_security_group
       - type: cloudify.openstack.port_connected_to_floating_ip
         target: floating_ip
@@ -156,8 +151,7 @@ node_templates:
     properties:
       openstack_config: { get_input: openstack_config }
       agent_config:
-        user: { get_input: agent_user }
-        key: { get_input: private_key_path }
+        install_method: none
       image: { get_input: image_id }
       flavor: { get_input: flavor_id }
       server:
@@ -171,5 +165,7 @@ capabilities:
     value: { get_attribute: [ vm, ip ] }
   public_ip:
     value: { get_attribute: [ floating_ip, floating_ip_address ] }
-  vm_node_instance_id:
-    value: { get_attribute: [ vm, node_instance_id ]}
+  ssh_user:
+    value: { get_input: ssh_user }
+  private_key_path:
+    value: { get_input: private_key_path }
